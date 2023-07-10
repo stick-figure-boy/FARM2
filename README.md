@@ -36,7 +36,7 @@ $ task up
 $ cd {your project path}/farm2
 $ task make-migrate -- {file_name}
 
-ex) task make-migrate -- {create_users_table}
+ex) task make-migrate -- create_users_table
 ```
 
 ### Run migrate
