@@ -1,0 +1,132 @@
+version: "3"
+services:
+  api:
+    build:
+      context: .
+      dockerfile: ./docker/api/Dockerfile
+    volumes:
+      - .:/go/api
+    ports:
+      - 8080:8080
+    tty: true
+    stdin_open: true
+    depends_on:
+      - db
+      - redis
+    networks:
+      - farm2-network
+
+  db:
+    image: mysql:8.0
+    platform: linux/amd64
+    container_name: ${DB_HOST}
+    restart: always
+    env_file:
+      - .env
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      TZ: Asia/Tokyo
+    ports:
+      - 3306:3306
+    command:
+      [
+        "mysqld",
+        "--character-set-server=utf8mb4",
+        "--collation-server=utf8mb4_general_ci",
+        "--default-time-zone=+09:00",
+      ]
+    volumes:
+      - ./docker/db/data:/var/lib/mysql
+    networks:
+      - farm2-network
+
+  testdb:
+    image: mysql:8.0
+    platform: linux/amd64
+    container_name: ${TEST_DB_HOST}
+    restart: always
+    env_file:
+      - .env
+    environment:
+      MYSQL_DATABASE: ${TEST_DB_NAME}
+      MYSQL_USER: ${TEST_DB_USER}
+      MYSQL_PASSWORD: ${TEST_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${TEST_DB_ROOT_PASSWORD}
+      TZ: Asia/Tokyo
+    ports:
+      - 3307:3306
+    command:
+      [
+        "mysqld",
+        "--character-set-server=utf8mb4",
+        "--collation-server=utf8mb4_general_ci",
+        "--default-time-zone=+09:00",
+      ]
+    volumes:
+      - ./docker/testdb/data:/var/lib/mysql
+    networks:
+      - farm2-network
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    restart: always
+    networks:
+      - farm2-network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    platform: linux/amd64
+    env_file:
+      - .env
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_HOST=${DB_HOST}
+      - PMA_USER=${DB_USER}
+      - PMA_PASSWORD=${DB_PASSWORD}
+    links:
+      - db
+    ports:
+      - 8888:80
+    volumes:
+      - /sessions
+    networks:
+      - farm2-network
+
+  testphpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    platform: linux/amd64
+    env_file:
+      - .env
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_HOST=${TEST_DB_HOST}
+      - PMA_USER=${TEST_DB_USER}
+      - PMA_PASSWORD=${TEST_DB_PASSWORD}
+    links:
+      - db
+    ports:
+      - 8889:80
+    volumes:
+      - /sessions
+    networks:
+      - farm2-network
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    platform: linux/amd64
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    networks:
+      - farm2-network
+
+volumes:
+  db:
+
+networks:
+  farm2-network:

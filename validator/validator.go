@@ -1,0 +1,15 @@
+package validator
+
+import "github.com/go-playground/validator"
+
+var (
+	validate *validator.Validate
+)
+
+func init() {
+	validate = validator.New()
+}
+
+func Validate(i interface{}) error {
+	return validate.Struct(i)
+}

@@ -1,0 +1,106 @@
+version: "3"
+
+dotenv: [".env"]
+
+tasks:
+  default:
+    cmds:
+      - echo "Hello Task."
+
+  setup:
+    desc: Create docker network and containers.
+    cmds:
+      - copy .env.example .env
+      - docker network create farm2-network
+      - docker-compose -f ./docker-compose.yml build
+
+  build:
+    desc: Docker build.
+    cmds:
+      - docker-compose -f ./docker-compose.yml build
+
+  up:
+    desc: docker-compose.yml up
+    cmds:
+      - docker-compose -f ./docker-compose.yml up
+
+  up-d:
+    desc: docker-compose.yml up -d
+    cmds:
+      - docker-compose -f ./docker-compose.yml up -d
+
+  down:
+    desc: docker-compose.yml down
+    cmds:
+      - docker-compose -f ./docker-compose.yml down
+
+  exec-api:
+    desc: Enter the api container.
+    cmds:
+      - task up-d
+      - docker-compose -f ./docker-compose.yml exec api bash || true
+
+  api-doc:
+    desc: Generate API docs.
+    cmds:
+      - task up-d
+      - task await
+      - docker-compose -f ./docker-compose.yml exec api bash -c "swag init ./main.go" || true
+      - open http://localhost:8080/swagger/index.html
+
+  phpmyadmin:
+    desc: Open the phpMyAdmin.
+    cmds:
+      - task up-d
+      - task await
+      - open http://localhost:8888
+
+  test-phpmyadmin:
+    desc: Open the testDB phpMyAdmin.
+    cmds:
+      - task up-d
+      - task await
+      - open http://localhost:8889
+
+  make-migrate:
+    desc: Make migration file.
+      To create table, use `create` as the Prefix. ex) create_users_table.
+      To alter table, use `create` as the Prefix. ex) alter_users_table.
+    cmds:
+      - task up-d
+      - task await
+      - docker-compose -f ./docker-compose.yml exec api bash -c "migrate create -ext sql -dir database/migrations -seq {{ .CLI_ARGS }}" || true
+
+  migrate:
+    desc: Run the migration file in `database/migrations`.
+    # prompt: This command changes the DB. Do you want to continue?
+    vars:
+      DB: mysql://$DB_USER:$DB_PASSWORD@tcp($DB_HOST:3306)/$DB_NAME?charset=utf8mb4&parseTime=True&loc=Local&allowNativePasswords=true
+      MIGRATE: migrate -path database/migrations -database '{{.DB}}' up
+    cmds:
+      - task up-d
+      - task await
+      - docker-compose -f ./docker-compose.yml exec api bash -c "{{.MIGRATE}}" || true
+      - docker-compose -f ./docker-compose.yml exec api bash -c "{{.MIGRATE_TEST_DB}}" || true
+
+  test-migrate:
+    desc: Run the test DB migration file in `database/migrations`.
+    vars:
+      TEST_DB: mysql://$TEST_DB_USER:$TEST_DB_PASSWORD@tcp($TEST_DB_HOST:3306)/$TEST_DB_NAME?charset=utf8mb4&parseTime=True&loc=Local&allowNativePasswords=true
+      MIGRATE_TEST_DB: migrate -path database/migrations -database '{{.TEST_DB}}' up
+    cmds:
+      - task up-d
+      - task await
+      - docker-compose -f ./docker-compose.yml exec api bash -c "{{.MIGRATE}}" || true
+      - docker-compose -f ./docker-compose.yml exec api bash -c "{{.MIGRATE_TEST_DB}}" || true
+
+  run-test:
+    desc: Run All test cases.
+    cmds:
+      - task up-d
+      - task test-migrate
+      - docker-compose -f ./docker-compose.yml exec api bash -c "go test ./... -v" || true
+
+  await:
+    cmds:
+      - sleep 5

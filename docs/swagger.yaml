@@ -1,0 +1,108 @@
+definitions:
+  apierror.ErrorResponse:
+    properties:
+      error:
+        type: string
+      error_code:
+        type: string
+      message:
+        type: string
+    type: object
+  user.RegisterUserRequest:
+    properties:
+      account_id:
+        type: string
+      name:
+        type: string
+    required:
+    - account_id
+    - name
+    type: object
+  user.UserResponse:
+    properties:
+      account_id:
+        type: string
+      name:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: farm2
+  title: farm2
+  version: "1.0"
+paths:
+  /v1/health-check:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: struct
+      summary: Health Check
+      tags:
+      - healthCheck
+  /v1/users:
+    post:
+      consumes:
+      - application/json
+      description: Register new user.
+      parameters:
+      - description: new user info
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.RegisterUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/user.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apierror.ErrorResponse'
+      summary: Register new user.
+      tags:
+      - user
+  /v1/users/{accountID}:
+    get:
+      consumes:
+      - application/json
+      description: Get user info matching the specified account ID.
+      parameters:
+      - description: account ID
+        in: path
+        name: accountID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user.UserResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apierror.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apierror.ErrorResponse'
+      summary: Get user info.
+      tags:
+      - user
+swagger: "2.0"
