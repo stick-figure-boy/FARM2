@@ -10,7 +10,7 @@ tasks:
   setup:
     desc: Create docker network and containers.
     cmds:
-      - copy .env.example .env
+      - cp .env.example .env
       - docker network create farm2-network
       - docker-compose -f ./docker-compose.yml build
 
